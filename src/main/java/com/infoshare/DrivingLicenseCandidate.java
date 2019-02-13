@@ -16,12 +16,13 @@ class DrivingLicenseCandidate {
     private Instant examRegistrationDate;
     private Instant licenseGrantedDate;
     private Instant licenseForbiddenDate;
+    private Instant examPassedDate;
 
     private DrivingLicenseCandidate() {
         uuid = UUID.randomUUID();
     }
 
-    public static DrivingLicenseCandidate init() {
+    static DrivingLicenseCandidate init() {
         return new DrivingLicenseCandidate();
     }
 
@@ -112,5 +113,16 @@ class DrivingLicenseCandidate {
 
     UUID getUuid() {
         return uuid;
+    }
+
+    public DrivingLicenseCandidate passExam() {
+        if (!isCourseCompleted()) {
+            throw new IllegalStateException();
+        }
+        if (!isRegisteredForExam()) {
+            throw new IllegalStateException();
+        }
+        this.examPassedDate = Instant.now();
+        return this;
     }
 }

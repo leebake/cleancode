@@ -44,4 +44,10 @@ public class CourseService {
 
         return drivingLicenseCandidateRepository.save(drivingLicenseCandidate).getUuid();
     }
+
+    public UUID passExam(UUID uuid) {
+        DrivingLicenseCandidate drivingLicenseCandidate = drivingLicenseCandidateRepository.getByUUID(uuid)
+                .passExam();
+        return drivingLicenseCandidateRepository.save(drivingLicenseCandidate).getUuid();
+    }
 }
