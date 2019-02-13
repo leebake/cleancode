@@ -1,14 +1,13 @@
 package com.infoshare;
 
-import lombok.Getter;
-
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Optional;
+import java.util.UUID;
 
-public class DrivingLicenseCandidate {
+class DrivingLicenseCandidate {
 
-    private UUID uuid;
+    private final UUID uuid;
     private Person person;
     private Category category;
 
@@ -17,6 +16,14 @@ public class DrivingLicenseCandidate {
     private Instant examRegistrationDate;
     private Instant licenseGrantedDate;
     private Instant licenseForbiddenDate;
+
+    private DrivingLicenseCandidate() {
+        uuid = UUID.randomUUID();
+    }
+
+    public static DrivingLicenseCandidate init() {
+        return new DrivingLicenseCandidate();
+    }
 
     DrivingLicenseCandidate registerForCourse(final Person person, final Category category) {
         if (isUnderSeventeen(person)) {
@@ -37,11 +44,11 @@ public class DrivingLicenseCandidate {
         return this;
     }
 
-    public boolean isLicenseForbidden() {
+    private boolean isLicenseForbidden() {
         return Optional.ofNullable(licenseForbiddenDate).isPresent();
     }
 
-    public boolean isLicenseGranted() {
+    private boolean isLicenseGranted() {
         return Optional.ofNullable(licenseGrantedDate).isPresent();
     }
 
@@ -49,16 +56,11 @@ public class DrivingLicenseCandidate {
         return person.getBirthDate().isAfter(LocalDate.now().minusYears(17));
     }
 
-    DrivingLicenseCandidate completeCourse(final Instant when) {
+    DrivingLicenseCandidate completeCourse() {
         if (!isRegisteredForCourse()) {
             throw new IllegalStateException();
         }
-        CourseCompletedEvent event = CourseCompletedEvent.builder().when(when).uuid(uuid).build();
-        return handleWithAppend(event);
-    }
-
-    private DrivingLicenseCandidate courseCompleted(CourseCompletedEvent event) {
-        this.courseCompletedDate = event.when();
+        this.courseCompletedDate = Instant.now();
         return this;
     }
 
@@ -72,17 +74,12 @@ public class DrivingLicenseCandidate {
         if (isLicenseForbidden()) {
             throw new IllegalStateException();
         }
-        RegisteredForExamEvent event = RegisteredForExamEvent.builder().uuid(uuid).when(when).build();
-        return handleWithAppend(event);
+        this.examRegistrationDate = Instant.now();
+        return this;
     }
 
     private boolean isUnderEighteen() {
         return person.getBirthDate().isAfter(LocalDate.now().minusYears(18));
-    }
-
-    private DrivingLicenseCandidate registeredForExam(RegisteredForExamEvent event) {
-        this.examRegistrationDate = event.when();
-        return this;
     }
 
     DrivingLicenseCandidate grantLicense() {
@@ -92,65 +89,28 @@ public class DrivingLicenseCandidate {
         if (!isRegisteredForExam()) {
             throw new IllegalStateException();
         }
-        final LicenseGrantedEvent event = LicenseGrantedEvent.builder().uuid(this.uuid).when(Instant.now()).build();
-        return handleWithAppend(event);
-    }
-
-    private DrivingLicenseCandidate licenseGranted(LicenseGrantedEvent event) {
-        this.licenseGrantedDate = event.when();
+        this.licenseGrantedDate = Instant.now();
         return this;
     }
 
     DrivingLicenseCandidate forbidLicense() {
-        final LicenseForbiddenEvent event = LicenseForbiddenEvent.builder().uuid(uuid).when(Instant.now()).build();
-        return handleWithAppend(event);
-    }
-
-    private DrivingLicenseCandidate licenseForbidden(LicenseForbiddenEvent event) {
-        this.licenseForbiddenDate = event.when();
+        this.licenseForbiddenDate = Instant.now();
         return this;
     }
 
-    public boolean isRegisteredForCourse() {
+    private boolean isRegisteredForCourse() {
         return Optional.ofNullable(courseRegistrationDate).isPresent();
     }
 
-    public boolean isCourseCompleted() {
+    private boolean isCourseCompleted() {
         return Optional.ofNullable(courseCompletedDate).isPresent();
     }
 
-    public boolean isRegisteredForExam() {
+    private boolean isRegisteredForExam() {
         return Optional.ofNullable(examRegistrationDate).isPresent();
     }
 
-    private void flushEvents() {
-        this.pendingEvents.clear();
-    }
-
-    private DrivingLicenseCandidate handleWithAppend(DomainEvent domainEvent) {
-        this.pendingEvents.add(domainEvent);
-        return this.handle(domainEvent);
-    }
-
-    private DrivingLicenseCandidate handle(DomainEvent event) {
-        return API.Match(event).of(
-                Case($(Predicates.instanceOf(CourseCompletedEvent.class)), this::courseCompleted),
-                Case($(Predicates.instanceOf(LicenseForbiddenEvent.class)), this::licenseForbidden),
-                Case($(Predicates.instanceOf(LicenseGrantedEvent.class)), this::licenseGranted),
-                Case($(Predicates.instanceOf(RegisteredForCourseEvent.class)), this::registeredForCourse),
-                Case($(Predicates.instanceOf(RegisteredForExamEvent.class)), this::registeredForExam)
-        );
-    }
-
-    public static DrivingLicenseCandidate from(UUID uuid, List<DomainEvent> domainEvents) {
-        return ofAll(domainEvents).foldLeft(new DrivingLicenseCandidate(uuid, new ArrayList<>()), DrivingLicenseCandidate::handle);
-    }
-
-    static DrivingLicenseCandidate init() {
-        return from(UUID.randomUUID(), Collections.emptyList());
-    }
-
-    public DrivingLicenseCandidate markChangesAsCommited() {
-        return new DrivingLicenseCandidate(uuid, Collections.emptyList());
+    UUID getUuid() {
+        return uuid;
     }
 }
